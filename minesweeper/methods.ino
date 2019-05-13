@@ -4,6 +4,18 @@ void wait_for_start(){
   }
 }
 
+void startbutton(){
+  if (digitalRead(startbtn) == LOW){
+    state = stateDetectWall;
+  }
+}
+
+void altbutton(){
+  if (digitalRead(altbtn) == LOW){
+    state = statePause;
+  }
+}
+
 int wrap(int position1, int position2){
   int sum = position1 + position2;
 

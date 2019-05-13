@@ -7,20 +7,21 @@
 #include "MPU6050_6Axis_MotionApps20.h"
 
 /* Variable Definitions */
-  // #define 
-    #define baudRate 9600
-  
+  // #define
+    #define baudRate 115200
+
     #define E1Pin 10 //PWM-1
     #define E2Pin 11 //PWM-2
     #define M1Pin 12 //DIR-1
     #define M2Pin 13 //DIR-2
-    
+
     #define forward LOW
     #define reverse HIGH
     #define left 0
     #define right 1
 
     #define speed1 20
+    #define turnSpeed 30
 
     #define triggerPin 7
     #define echoPin 6
@@ -31,9 +32,6 @@
 
     #define mineSensitivity 400
 
-  // boolean 
-    bool runYet = false;
-  
   // integer
     int magx = 0;
     int magy = 0;
@@ -47,9 +45,9 @@
     uint16_t fifoCount;     // count of all bytes currently in FIFO
     uint8_t fifoBuffer[128]; // FIFO storage buffer
     volatile bool mpuInterrupt = false;
-    
+
     MPU6050 mpu;
-    
+
     Quaternion q;           // [w, x, y, z]         quaternion container
     VectorInt16 aa;         // [x, y, z]            accel sensor measurements
     VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
@@ -57,35 +55,37 @@
     VectorFloat gravity;    // [x, y, z]            gravity vector
     //float euler[3];         // [psi, theta, phi]    Euler angle container
     float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
-    
+
     unsigned long initTime = 0;
     unsigned long debounceDelay = 1000;
     int l_speed, r_speed;
     int initial_heading;
     bool start = false; // status of run
     bool runyet = false; // status of runoncebool dmpReady = false;  // set true if DMP init was successful
-    
-    // states for state machine
-    #define stateDetectMine 0
-    #define stateMarkMine 10
-    #define stateDetectWall 20
-    #define stateStartTurn 21
-    #define stateTurnAround 30
+
+    // states for mark mine state machine
+    #define stateDetectMine 1000
+    #define stateMarkMine 1100
+    int stateMine;
+
+    // states for main state machine
+    #define stateDetectWall 10
+    #define stateStartTurn 20
+    #define stateEvaluateHeading 30
     #define stateBreak 40
     #define stateStop 50
-    
+    #define statePause 60
+    int state;
+
     // variables for state machine layer 1
     int initialHeading;
     int projectedHeading;
     int turnDirection;
-    
+
     #define clockwise 1
     #define counterclockwise 2
-    #define neutral 3
-    
-    char state = "detect mine";
-
     #define startbtn A3
+    #define altbtn A2
 
 /* Creation of Objects */
   // New Ping Library
@@ -153,12 +153,19 @@ void init_gyro(){
       Serial.print(F("DMP Initialization failed (code "));
       Serial.print(devStatus);
       Serial.println(F(")"));
+
+      if (devStatus == 1){
+        Serial.print("Restart the Arduino for a quick fix");
+      }
   }
 }
 
 void init_components(){
   pinMode(startbtn, INPUT);
   digitalWrite(startbtn, HIGH);
+
+  pinMode(altbtn, INPUT);
+  digitalWrite(altbtn, HIGH);
 }
 
 void setup(){
@@ -175,93 +182,107 @@ void setup(){
   Serial.println("Components Initialised");
 
   Serial.println("Waiting for Start");
-  wait_for_start(); // clear fifo while in block operation
-  
-  steer(40, 40);
+  // wait_for_start(); // clear fifo while in block operation
+
   Serial.println("Starting motors");
 
   turnDirection = clockwise;
 
-  state = stateDetectMine; // start the switch case at the top of the stack
+  state = statePause; // start the state machine with the initial state
+  stateMine = stateDetectMine; // start the mark mines state machine with detection
 }
 
 void loop(){
-  switch (state){
-    case stateDetectMine:
-//      Serial.println("stateDetectMine");
-      if (detectMine()){
-//        Serial.println("Mine detected!");
-        state = stateMarkMine;
-      }
-      else{
-        state = stateDetectWall;
-      }
-      break;
+  // switch(stateMine){
+  //   case stateDetectMine:
+  //     if (detectMine()){
+  //       stop();
+  //       stateMine = stateMarkMine;
+  //       state = statePause;
+  //       // Indicate that the mine has been detected by flashing an LED
+  //     }
+  //     else{
+  //       // do nothing, state does not change
+  //     }
+  //     break;
+  //
+  //   case stateMarkMine:
+  //     Serial.println("Marking mine");
+  //     stateMine = stateDetectMine; // do this once the mine has finished being marked
+  //     state = stateDetectWall;
+  //     break;
+  // }
+  Serial.println(heading());
 
-    case stateMarkMine:
-//      Serial.println("stateMarkMine");
-      markMine();
-      state = stateDetectWall;
+  altbutton();
+  startbutton();
+
+  switch(state){
+    case statePause:
+      stop();
       break;
 
     case stateDetectWall:
       if (detectWall()){
-//        Serial.println("Turning");
-
-        if (!turnDirection == neutral){
-          stop();
-        }
-        
         initialHeading = heading();
-        projectedHeading = wrap(initialHeading, 180);
+        projectedHeading = wrap(initialHeading, 180.0);
+        Serial.print("initialHeading:");
+        Serial.print(initialHeading);
+
+        Serial.print("projectedHeading:");
+        Serial.print(projectedHeading);
+
         turnDirection = switchTurnDirection(turnDirection);
-        state = stateTurnAround;
+        state = stateStartTurn;
+        Serial.println("stateStartTurn");
       }
       else{
-        state = stateBreak;
-        turnDirection = neutral;
+        steer(40, 40);
       }
+
       break;
 
-    case stateTurnAround:
-//      Serial.println("stateTurnAround");    
-      if (!((projectedHeading-10) <= heading() and heading() <= (projectedHeading-10))){
-        ("Targeted heading reached");
-        stop();
+    case stateStartTurn:
+      if (turnDirection == clockwise){
+        steer(turnSpeed, 0);
+      }
+
+      else if(turnDirection == counterclockwise){
+        steer(0, turnSpeed);
+      }
+
+      state = stateEvaluateHeading;
+      Serial.println("stateEvaluateHeading");
+      break;
+
+    case stateEvaluateHeading:
+      // formerly stateTurnAround
+      int currentHeading = heading();
+      if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
+        state = stateBreak;
+        Serial.println("stateBreak");
       }
       else{
-        if (turnDirection == clockwise){
-//          Serial.println("turning clockwise");
-          steer(speed1, 0);
-        }
-
-        else if (turnDirection == counterclockwise){
-//          Serial.println("turning counterclockwise");
-          steer(0, speed1);
-        }
+        // do nothing, state remains the same until it reaches correct rotation
       }
-
-      
-      state = stateBreak;
       break;
 
     case stateBreak:
-//      Serial.println("stateBreak");    
       if (minesDetected >= 8){
         state = stateStop;
+        Serial.println("stateStop");
       }
       else{
-        if (turnDirection == neutral){
-          steer(40, 40);
-        }
-        
-        state = stateDetectMine;
+        state = stateDetectWall;
+        Serial.println("stateDetectWall");
       }
       break;
-    
+
     case stateStop:
-//      Serial.println("stateStop");
+      // do nothing. Idle until reset.
       break;
   }
+
+
   mpu.resetFIFO();
 }
