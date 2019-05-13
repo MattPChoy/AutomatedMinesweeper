@@ -20,8 +20,8 @@
     #define left 0
     #define right 1
 
-    #define speed1 20
-    #define turnSpeed 30
+    #define speed1 100
+    #define turnSpeed 80
 
     #define triggerPin 7
     #define echoPin 6
@@ -186,7 +186,7 @@ void setup(){
 
   Serial.println("Starting motors");
 
-  turnDirection = clockwise;
+  turnDirection = counterclockwise;
 
   state = statePause; // start the state machine with the initial state
   stateMine = stateDetectMine; // start the mark mines state machine with detection
@@ -212,7 +212,7 @@ void loop(){
   //     state = stateDetectWall;
   //     break;
   // }
-  Serial.println(heading());
+  // Serial.println(heading());
 
   altbutton();
   startbutton();
@@ -237,7 +237,7 @@ void loop(){
         Serial.println("stateStartTurn");
       }
       else{
-        steer(40, 40);
+        steer(speed1, speed1);
       }
 
       break;
@@ -261,6 +261,8 @@ void loop(){
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
         state = stateBreak;
         Serial.println("stateBreak");
+        stop();
+        steer(speed1, speed1);
       }
       else{
         // do nothing, state remains the same until it reaches correct rotation
