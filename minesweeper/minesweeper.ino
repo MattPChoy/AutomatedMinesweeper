@@ -53,7 +53,6 @@
     VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
     VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
     VectorFloat gravity;    // [x, y, z]            gravity vector
-    //float euler[3];         // [psi, theta, phi]    Euler angle container
     float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
     unsigned long initTime = 0;
@@ -186,60 +185,30 @@ void setup(){
 
   Serial.println("Starting motors");
 
-  turnDirection = counterclockwise;
+    turnDirection = counterclockwise;
 
   state = statePause; // start the state machine with the initial state
   stateMine = stateDetectMine; // start the mark mines state machine with detection
 }
 
 void loop(){
-  // switch(stateMine){
-  //   case stateDetectMine:
-  //     if (detectMine()){
-  //       stop();
-  //       stateMine = stateMarkMine;
-  //       state = statePause;
-  //       // Indicate that the mine has been detected by flashing an LED
-  //     }
-  //     else{
-  //       // do nothing, state does not change
-  //     }
-  //     break;
-  //
-  //   case stateMarkMine:
-  //     Serial.println("Marking mine");
-  //     stateMine = stateDetectMine; // do this once the mine has finished being marked
-  //     state = stateDetectWall;
-  //     break;
-  // }
-  // Serial.println(heading());
+  /*
+   * Write some code here that utilises a switch case to mark the mines and
+   * upon finishing, returns to the main switch case. This can not be blocking
+   * code as the fifo will overflow and cause errors with the gyroscope.
+  */
 
   altbutton();
   startbutton();
 
   switch(state){
-    case statePause:
-      stop();
-      break;
-
     case stateDetectWall:
       if (detectWall()){
         initialHeading = heading();
         projectedHeading = wrap(initialHeading, 180.0);
-        Serial.print("initialHeading:");
-        Serial.print(initialHeading);
-
-        Serial.print("projectedHeading:");
-        Serial.print(projectedHeading);
-
         turnDirection = switchTurnDirection(turnDirection);
         state = stateStartTurn;
-        Serial.println("stateStartTurn");
       }
-      else{
-        steer(speed1, speed1);
-      }
-
       break;
 
     case stateStartTurn:
@@ -252,37 +221,10 @@ void loop(){
       }
 
       state = stateEvaluateHeading;
-      Serial.println("stateEvaluateHeading");
       break;
 
     case stateEvaluateHeading:
-      // formerly stateTurnAround
-      int currentHeading = heading();
-      if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
-        state = stateBreak;
-        Serial.println("stateBreak");
-        stop();
-        steer(speed1, speed1);
-      }
-      else{
-        // do nothing, state remains the same until it reaches correct rotation
-      }
-      break;
-
-    case stateBreak:
-      if (minesDetected >= 8){
-        state = stateStop;
-        Serial.println("stateStop");
-      }
-      else{
-        state = stateDetectWall;
-        Serial.println("stateDetectWall");
-      }
-      break;
-
-    case stateStop:
-      // do nothing. Idle until reset.
-      break;
+  f    
   }
 
 
