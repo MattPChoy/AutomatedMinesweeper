@@ -1,10 +1,12 @@
 /* Import External Packages */
 #include <NewPing.h>
 #include <Wire.h>
+#include <Servo.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_HMC5883_U.h>
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
+
 
 /* Variable Definitions */
   // #define
@@ -20,17 +22,22 @@
     #define left 0
     #define right 1
 
-    #define speed1 90
-    #define turnSpeed 75
+    #define speed1 100
+    #define turnSpeed 80
 
     #define triggerPin 7
     #define echoPin 6
-    #define minWallDist 15
+    #define minWallDist 10
     #define range 3000 // the maximum distance allowed for the ultrasonic sensor
 
     #define interruptPin 2
 
     #define mineSensitivity 100
+
+    #define servo_offset 27
+
+    #define servo_init_angle  0
+    #define servo_fire_angle  30
 
   // integer
     int magx = 0;
@@ -62,6 +69,7 @@
     int initial_heading;
     bool start = false; // status of run
     bool runyet = false; // status of runoncebool dmpReady = false;  // set true if DMP init was successful
+    bool mineMarked = false;
 
     // states for mark mine state machine
     #define stateDetectMine 1000
@@ -92,6 +100,8 @@
     NewPing sonar(triggerPin, echoPin, range);
   // Adafruit HMC8553 Library
     Adafruit_HMC5883_Unified mag = Adafruit_HMC5883_Unified(12345);
+  // Servo.h
+    Servo myservo;
 
 void init_motors(){
     pinMode(E1Pin, OUTPUT);
@@ -168,6 +178,11 @@ void init_components(){
   digitalWrite(altbtn, HIGH);
 }
 
+void init_marking(){
+    myservo.attach(2);  // attaches the servo on pin 2 to the servo object
+    myservo.write(servo_init_angle);
+}
+
 void setup(){
   Serial.begin(baudRate);
   init_motors();
@@ -176,7 +191,6 @@ void setup(){
   Serial.println("Ultrasonic Initialised");
   init_magnetometer();
   Serial.println("Magnetometer Initialised");
-  displaySensorDetails();
   init_gyro();
   Serial.println("Gyro Initialised");
   init_components();
@@ -194,13 +208,33 @@ void setup(){
 }
 
 void loop(){
+  Serial.println(state);
+   switch(stateMine){
+     case stateDetectMine:
+       if (detectMine()){
+         stop();
+         stateMine = stateMarkMine;
+         state = statePause;
+         mineMarked = false;
+         // Indicate that the mine has been detected by flashing an LED
+       }
+       break;
+  
+     case stateMarkMine:
+       Serial.println("Marking mine");
+       stateMine = stateDetectMine; // do this once the mine has finished being marked
+       state = stateDetectWall;
+       markMine();
+       break;
+   }
+
   altbutton();
   startbutton();
-  getMagneticField();
   detectMine();
 
   switch(state){
     case statePause:
+      stop();
       break;
 
     case stateDetectWall:
@@ -219,6 +253,7 @@ void loop(){
       }
       else{
         steer(speed1, speed1);
+        Serial.println("Setting speed in stateDetectWall");
       }
 
       break;
@@ -240,10 +275,11 @@ void loop(){
       // formerly stateTurnAround
       int currentHeading = heading();
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
-        state = stateDetectWall;
+        state = stateBreak;
         Serial.println("stateBreak");
         stop();
         steer(speed1, speed1);
+        Serial.println("Settings speed in stateEvaluateHeading");
       }
       else{
         // do nothing, state remains the same until it reaches correct rotation

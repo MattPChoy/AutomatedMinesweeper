@@ -5,7 +5,6 @@ void wait_for_start(){
 }
 
 void startbutton(){
-  
   if (digitalRead(startbtn) == LOW){
     state = stateDetectWall;
     Serial.println("Start!");
@@ -33,6 +32,7 @@ int wrap(int position1, int position2){
 }
 
 int switchTurnDirection(int funcTurnDirection){
+  
   if (funcTurnDirection == clockwise){
     return counterclockwise;
   }
@@ -40,4 +40,21 @@ int switchTurnDirection(int funcTurnDirection){
   else if (funcTurnDirection == counterclockwise){
     return clockwise;
   }
+}
+
+void set_servo_via_pot(int val){
+
+  myservo.write(servo_offset);
+  Serial.print("servo angle:");
+  Serial.print(servo_offset);
+}
+
+void tuneServo(){
+//  init_marker();
+//  pinMode(button,INPUT_PULLUP);
+//    int val= analogRead(potpin);
+//  val=map(val,0,1023,0,180);
+//  Serial.begin(115200);
+//  Serial.println("begin");
+//  set_servo_via_pot(servo_offset);
 }

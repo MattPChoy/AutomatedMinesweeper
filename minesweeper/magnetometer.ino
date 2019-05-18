@@ -20,9 +20,16 @@ void getMagneticField(){
   magx = event.magnetic.x;
   magy = event.magnetic.y;
   magz = event.magnetic.z;
+
+//  Serial.print(magx);
+//  Serial.print(" | ");
+//  Serial.print(magy);
+//  Serial.print(" | ");
+//  Serial.println(magz);
 }
 
 bool detectMine(){
+  getMagneticField();
   if (abs(magx) > mineSensitivity){
     Serial.println("Mine detected");
     return true;
