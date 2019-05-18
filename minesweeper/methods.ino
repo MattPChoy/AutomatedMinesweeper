@@ -5,8 +5,10 @@ void wait_for_start(){
 }
 
 void startbutton(){
+  
   if (digitalRead(startbtn) == LOW){
     state = stateDetectWall;
+    Serial.println("Start!");
   }
 }
 

@@ -20,17 +20,17 @@
     #define left 0
     #define right 1
 
-    #define speed1 100
-    #define turnSpeed 80
+    #define speed1 90
+    #define turnSpeed 75
 
     #define triggerPin 7
     #define echoPin 6
-    #define minWallDist 10
+    #define minWallDist 15
     #define range 3000 // the maximum distance allowed for the ultrasonic sensor
 
     #define interruptPin 2
 
-    #define mineSensitivity 400
+    #define mineSensitivity 100
 
   // integer
     int magx = 0;
@@ -53,6 +53,7 @@
     VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
     VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
     VectorFloat gravity;    // [x, y, z]            gravity vector
+    //float euler[3];         // [psi, theta, phi]    Euler angle container
     float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
     unsigned long initTime = 0;
@@ -175,6 +176,7 @@ void setup(){
   Serial.println("Ultrasonic Initialised");
   init_magnetometer();
   Serial.println("Magnetometer Initialised");
+  displaySensorDetails();
   init_gyro();
   Serial.println("Gyro Initialised");
   init_components();
@@ -185,30 +187,40 @@ void setup(){
 
   Serial.println("Starting motors");
 
-    turnDirection = counterclockwise;
+  turnDirection = counterclockwise;
 
   state = statePause; // start the state machine with the initial state
   stateMine = stateDetectMine; // start the mark mines state machine with detection
 }
 
 void loop(){
-  /*
-   * Write some code here that utilises a switch case to mark the mines and
-   * upon finishing, returns to the main switch case. This can not be blocking
-   * code as the fifo will overflow and cause errors with the gyroscope.
-  */
-
   altbutton();
   startbutton();
+  getMagneticField();
+  detectMine();
 
   switch(state){
+    case statePause:
+      break;
+
     case stateDetectWall:
       if (detectWall()){
         initialHeading = heading();
         projectedHeading = wrap(initialHeading, 180.0);
+        Serial.print("initialHeading:");
+        Serial.print(initialHeading);
+
+        Serial.print("projectedHeading:");
+        Serial.print(projectedHeading);
+
         turnDirection = switchTurnDirection(turnDirection);
         state = stateStartTurn;
+        Serial.println("stateStartTurn");
       }
+      else{
+        steer(speed1, speed1);
+      }
+
       break;
 
     case stateStartTurn:
@@ -221,10 +233,37 @@ void loop(){
       }
 
       state = stateEvaluateHeading;
+      Serial.println("stateEvaluateHeading");
       break;
 
     case stateEvaluateHeading:
-  f    
+      // formerly stateTurnAround
+      int currentHeading = heading();
+      if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
+        state = stateDetectWall;
+        Serial.println("stateBreak");
+        stop();
+        steer(speed1, speed1);
+      }
+      else{
+        // do nothing, state remains the same until it reaches correct rotation
+      }
+      break;
+
+    case stateBreak:
+      if (minesDetected >= 8){
+        state = stateStop;
+        Serial.println("stateStop");
+      }
+      else{
+        state = stateDetectWall;
+        Serial.println("stateDetectWall");
+      }
+      break;
+
+    case stateStop:
+      // do nothing. Idle until reset.
+      break;
   }
 
 
