@@ -83,6 +83,7 @@
     #define stateBreak 40
     #define stateStop 50
     #define statePause 60
+    #define stateMoveAroundMine 70
     int state;
 
     // variables for state machine layer 1
@@ -94,6 +95,8 @@
     #define counterclockwise 2
     #define startbtn A3
     #define altbtn A2
+
+    int currentMillis;
 
 /* Creation of Objects */
   // New Ping Library
@@ -205,34 +208,56 @@ void setup(){
 
   state = statePause; // start the state machine with the initial state
   stateMine = stateDetectMine; // start the mark mines state machine with detection
+
+  delay(5000);
 }
 
 void loop(){
+  
+  altbutton();
+  startbutton();
+  detectMine();
+
   Serial.println(state);
    switch(stateMine){
      case stateDetectMine:
+      Serial.print("stateDetectMine");
        if (detectMine()){
          stop();
          stateMine = stateMarkMine;
          state = statePause;
          mineMarked = false;
          // Indicate that the mine has been detected by flashing an LED
+         currentMillis = millis();
        }
        break;
   
      case stateMarkMine:
        Serial.println("Marking mine");
-       stateMine = stateDetectMine; // do this once the mine has finished being marked
-       state = stateDetectWall;
-       markMine();
+
+       if (mineMarked == false){
+        mineMarked = true;
+        markMine();
+       }
+       state = stateMoveAroundMine;
        break;
    }
 
-  altbutton();
-  startbutton();
-  detectMine();
-
   switch(state){
+    case stateMoveAroundMine:
+
+      // Needs to move around mine instead of just going straight over it
+      /*
+       * Rotate 90 degrees
+       * `x
+      */
+      steer(speed1, speed1);
+      delay(500);
+      mpu.resetFIFO();
+
+      state = stateDetectWall;
+      stateMine = stateDetectMine;
+    
     case statePause:
       stop();
       break;

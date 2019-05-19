@@ -49,6 +49,11 @@ void set_servo_via_pot(int val){
   Serial.print(servo_offset);
 }
 
+void moveAroundMine(){
+  steer(speed1, speed1);
+  delay(500);
+}
+
 void tuneServo(){
 //  init_marker();
 //  pinMode(button,INPUT_PULLUP);
