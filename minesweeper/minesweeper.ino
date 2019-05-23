@@ -71,6 +71,11 @@
     bool runyet = false; // status of runoncebool dmpReady = false;  // set true if DMP init was successful
     bool mineMarked = false;
 
+    int magxoffset=0;
+    int magyoffset=0;
+    int magzoffset=0;
+    bool magrunyet = false;
+
     // states for mark mine state machine
     #define stateDetectMine 1000
     #define stateMarkMine 1100
@@ -218,10 +223,10 @@ void loop(){
   startbutton();
   detectMine();
 
-  Serial.println(state);
+//  Serial.println(state);
    switch(stateMine){
      case stateDetectMine:
-      Serial.print("stateDetectMine");
+//      Serial.print("stateDetectMine");
        if (detectMine()){
          stop();
          stateMine = stateMarkMine;
@@ -233,7 +238,7 @@ void loop(){
        break;
   
      case stateMarkMine:
-       Serial.println("Marking mine");
+//       Serial.println("Marking mine");
 
        if (mineMarked == false){
         mineMarked = true;
@@ -266,19 +271,19 @@ void loop(){
       if (detectWall()){
         initialHeading = heading();
         projectedHeading = wrap(initialHeading, 180.0);
-        Serial.print("initialHeading:");
-        Serial.print(initialHeading);
-
-        Serial.print("projectedHeading:");
-        Serial.print(projectedHeading);
+//        Serial.print("initialHeading:");
+//        Serial.print(initialHeading);
+//
+//        Serial.print("projectedHeading:");
+//        Serial.print(projectedHeading);
 
         turnDirection = switchTurnDirection(turnDirection);
         state = stateStartTurn;
-        Serial.println("stateStartTurn");
+//        Serial.println("stateStartTurn");
       }
       else{
         steer(speed1, speed1);
-        Serial.println("Setting speed in stateDetectWall");
+//        Serial.println("Setting speed in stateDetectWall");
       }
 
       break;
@@ -293,18 +298,19 @@ void loop(){
       }
 
       state = stateEvaluateHeading;
-      Serial.println("stateEvaluateHeading");
+//      Serial.println("stateEvaluateHeading");
       break;
 
     case stateEvaluateHeading:
       // formerly stateTurnAround
+      Serial.println(heading());
       int currentHeading = heading();
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
         state = stateBreak;
-        Serial.println("stateBreak");
+//        Serial.println("stateBreak");
         stop();
         steer(speed1, speed1);
-        Serial.println("Settings speed in stateEvaluateHeading");
+//        Serial.println("Settings speed in stateEvaluateHeading");
       }
       else{
         // do nothing, state remains the same until it reaches correct rotation
@@ -314,11 +320,11 @@ void loop(){
     case stateBreak:
       if (minesDetected >= 8){
         state = stateStop;
-        Serial.println("stateStop");
+//        Serial.println("stateStop");
       }
       else{
         state = stateDetectWall;
-        Serial.println("stateDetectWall");
+//        Serial.println("stateDetectWall");
       }
       break;
 
