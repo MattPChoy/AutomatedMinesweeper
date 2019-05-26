@@ -1,11 +1,12 @@
-
 /* Import External Packages */
 #include <NewPing.h>
 #include <Wire.h>
+#include <Servo.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_HMC5883_U.h>
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
+
 
 /* Variable Definitions */
   // #define
@@ -21,20 +22,22 @@
     #define left 0
     #define right 1
 
-    #define speed1 150
+    #define speed1 100
     #define turnSpeed 80
-
-//    #define speed1 100
-//    #define turnSpeed 70
 
     #define triggerPin 7
     #define echoPin 6
-    #define minWallDist 25
+    #define minWallDist 10
     #define range 3000 // the maximum distance allowed for the ultrasonic sensor
 
     #define interruptPin 2
 
-    int mineSensitivity = 200;
+    #define mineSensitivity 100
+
+    #define servo_offset 27
+
+    #define servo_init_angle  0
+    #define servo_fire_angle  30
 
   // integer
     int magx = 0;
@@ -66,12 +69,16 @@
     int initial_heading;
     bool start = false; // status of run
     bool runyet = false; // status of runoncebool dmpReady = false;  // set true if DMP init was successful
+    bool mineMarked = false;
+
+    int magxoffset=0;
+    int magyoffset=0;
+    int magzoffset=0;
+    bool magrunyet = false;
 
     // states for mark mine state machine
     #define stateDetectMine 1000
-    #define stateMinePause 1001
     #define stateMarkMine 1100
-    
     int stateMine;
 
     // states for main state machine
@@ -81,6 +88,7 @@
     #define stateBreak 40
     #define stateStop 50
     #define statePause 60
+    #define stateMoveAroundMine 70
     int state;
 
     // variables for state machine layer 1
@@ -93,12 +101,95 @@
     #define startbtn A3
     #define altbtn A2
 
+    int currentMillis;
+
 /* Creation of Objects */
   // New Ping Library
     NewPing sonar(triggerPin, echoPin, range);
   // Adafruit HMC8553 Library
     Adafruit_HMC5883_Unified mag = Adafruit_HMC5883_Unified(12345);
+  // Servo.h
+    Servo myservo;
 
+void init_motors(){
+    pinMode(E1Pin, OUTPUT);
+    pinMode(M1Pin, OUTPUT);
+    pinMode(E2Pin, OUTPUT);
+    pinMode(M2Pin, OUTPUT);
+}
+
+void init_ultrasonic(){
+  pinMode(triggerPin, OUTPUT);
+  pinMode(echoPin, INPUT);
+}
+
+void init_magnetometer(){
+  if(!mag.begin()){
+    /* There was a problem detecting the HMC5883 ... check your connections */
+    Serial.println("Ooops, no HMC5883 detected ... Check your wiring!");
+    while(1);
+  }
+
+//  displaySensorDetails();
+  Serial.println("HMC5883 Magnetometer Initialised");
+}
+
+void init_gyro(){
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+        Wire.begin();
+        Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+    #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+        Fastwire::setup(400, true);
+    #endif
+
+  while (!Serial);
+//  Serial.println(F("Initializing I2C devices..."));
+  mpu.initialize();
+  pinMode(interruptPin, INPUT);
+//  Serial.println(F("Testing device connections..."));
+//  Serial.println(mpu.testConnection() ? F("MPU6050 connection successful") : F("MPU6050 connection failed"));
+
+//  Serial.println(F("Initializing DMP..."));
+  devStatus = mpu.dmpInitialize();
+
+  mpu.setXGyroOffset(220);
+  mpu.setYGyroOffset(76);
+  mpu.setZGyroOffset(-85);
+  mpu.setZAccelOffset(1788); // 1688 factory default for my test chip
+
+  if (devStatus == 0) {
+      mpu.setDMPEnabled(true);
+
+//      Serial.print(F("Enabling interrupt detection (Arduino external interrupt "));
+      attachInterrupt(digitalPinToInterrupt(interruptPin), dmpDataReady, RISING);
+      mpuIntStatus = mpu.getIntStatus();
+//      Serial.println(F("DMP ready! Waiting for first interrupt..."));
+      dmpReady = true;
+
+      packetSize = mpu.dmpGetFIFOPacketSize();
+  } else {
+      Serial.print(F("DMP Initialization failed (code "));
+      Serial.print(devStatus);
+      Serial.println(F(")"));
+
+      if (devStatus == 1){
+        Serial.print("Restart the Arduino for a quick fix");
+      }
+  }
+}
+
+void init_components(){
+  pinMode(startbtn, INPUT);
+  digitalWrite(startbtn, HIGH);
+
+  pinMode(altbtn, INPUT);
+  digitalWrite(altbtn, HIGH);
+}
+
+void init_marking(){
+    myservo.attach(2);  // attaches the servo on pin 2 to the servo object
+    myservo.write(servo_init_angle);
+}
 
 void setup(){
   Serial.begin(baudRate);
@@ -121,40 +212,57 @@ void setup(){
   turnDirection = counterclockwise;
 
   state = statePause; // start the state machine with the initial state
-  stateMine = stateMinePause; // start the mark mines state machine with detection
+  stateMine = stateDetectMine; // start the mark mines state machine with detection
+
+  delay(5000);
 }
 
 void loop(){
-
+  
   altbutton();
   startbutton();
+  detectMine();
 
-  printState(state);
-  printState(stateMine);
-  switch(stateMine){
-    case stateMinePause:
-      break;
-    
-    case stateDetectMine:
-      bool mine = detectMine();
-      if (mine){
+//  Serial.println(state);
+   switch(stateMine){
+     case stateDetectMine:
+//      Serial.print("stateDetectMine");
+       if (detectMine()){
+         stop();
+         stateMine = stateMarkMine;
+         state = statePause;
+         mineMarked = false;
+         // Indicate that the mine has been detected by flashing an LED
+         currentMillis = millis();
+       }
+       break;
+  
+     case stateMarkMine:
+//       Serial.println("Marking mine");
+
+       if (mineMarked == false){
+        mineMarked = true;
         markMine();
-        stateMine = stateMarkMine;
-        state = statePause;
-      }
-      else{
-        stateMine = stateDetectMine;
-        if (state == statePause){
-          state = stateDetectWall;
-        }
-      }
-
-    case stateMarkMine:
-//      markMine();
-      stateMine = stateDetectMine;
-  }
+       }
+       state = stateMoveAroundMine;
+       break;
+   }
 
   switch(state){
+    case stateMoveAroundMine:
+
+      // Needs to move around mine instead of just going straight over it
+      /*
+       * Rotate 90 degrees
+       * `x
+      */
+      steer(speed1, speed1);
+      delay(500);
+      mpu.resetFIFO();
+
+      state = stateDetectWall;
+      stateMine = stateDetectMine;
+    
     case statePause:
       stop();
       break;
@@ -163,18 +271,19 @@ void loop(){
       if (detectWall()){
         initialHeading = heading();
         projectedHeading = wrap(initialHeading, 180.0);
-        Serial.print("initialHeading:");
-        Serial.print(initialHeading);
-
-        Serial.print("projectedHeading:");
-        Serial.print(projectedHeading);
+//        Serial.print("initialHeading:");
+//        Serial.print(initialHeading);
+//
+//        Serial.print("projectedHeading:");
+//        Serial.print(projectedHeading);
 
         turnDirection = switchTurnDirection(turnDirection);
         state = stateStartTurn;
-        Serial.println("stateStartTurn");
+//        Serial.println("stateStartTurn");
       }
       else{
         steer(speed1, speed1);
+//        Serial.println("Setting speed in stateDetectWall");
       }
 
       break;
@@ -189,18 +298,19 @@ void loop(){
       }
 
       state = stateEvaluateHeading;
-      Serial.println("stateEvaluateHeading");
+//      Serial.println("stateEvaluateHeading");
       break;
 
     case stateEvaluateHeading:
       // formerly stateTurnAround
+      Serial.println(heading());
       int currentHeading = heading();
-      Serial.println(currentHeading);
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
-        state = stateDetectWall;
-        Serial.println("stateBreak");
+        state = stateBreak;
+//        Serial.println("stateBreak");
         stop();
         steer(speed1, speed1);
+//        Serial.println("Settings speed in stateEvaluateHeading");
       }
       else{
         // do nothing, state remains the same until it reaches correct rotation
@@ -210,11 +320,11 @@ void loop(){
     case stateBreak:
       if (minesDetected >= 8){
         state = stateStop;
-        Serial.println("stateStop");
+//        Serial.println("stateStop");
       }
       else{
         state = stateDetectWall;
-        Serial.println("stateDetectWall");
+//        Serial.println("stateDetectWall");
       }
       break;
 

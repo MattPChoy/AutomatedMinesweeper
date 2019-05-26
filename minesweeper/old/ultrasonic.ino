@@ -13,9 +13,7 @@ int ultrasonic_distance(){
 
 bool detectWall(){
   if (ultrasonic_distance() <= minWallDist){
-    Serial.print("Wall detected at");
-    Serial.print(minWallDist);
-    Serial.print("cm");
+    Serial.println("Wall detected <=10cm");
     return true;
   }
   else{

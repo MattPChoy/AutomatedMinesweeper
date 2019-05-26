@@ -16,52 +16,47 @@ void displaySensorDetails(void){
 void getMagneticField(){
   sensors_event_t event; 
   mag.getEvent(&event);
+
+  magx = event.magnetic.x;
+  magy = event.magnetic.y;
+  magz = event.magnetic.z;
+
+  /*
+  Serial.print(abs(magx));
+  Serial.print(" | ");
   
-  magx = event.magnetic.x - magxoffset;
-  magy = event.magnetic.y - magyoffset;
-  magz = event.magnetic.z - magzoffset;
-
-  if (!magrunyet){
-    magrunyet = true;
-    magxoffset = magx;
-    magyoffset = magy;
-    magzoffset = magz;
-  }
-
-//  Serial.print(magx);
-//  Serial.print(" | ");
-//  Serial.print(magy);
-//  Serial.print(" | ");
-//  Serial.print(magz);
-
-//  Serial.print(" ----- ");
-//  Serial.print(magx+magxoffset);
-//  Serial.print(" | ");
-//  Serial.print(magy+magyoffset);
-//  Serial.print(" | ");
-//  Serial.println(magz+magzoffset);
+  Serial.print(abs(magy));
+  Serial.print(" | ");
+  
+  Serial.println(abs(magz));
+  */
 }
 
 bool detectMine(){
   getMagneticField();
-  if (magrunyet){
-    if (int(abs(magx)) > mineSensitivity){
-      Serial.println("Mine detected");
-//      return true;
-    }
-  
-    else if (int(abs(magy)) > mineSensitivity){
-      Serial.println("Mine detected");
-//      return true;
-    }
-  
-    else if (int(abs(magz)) > mineSensitivity){
-      Serial.println("Mine detected");
-//      return true;
-    }
-    else{
-  //    Serial.println("Mine not detected!");
-      return false;
-    }
+
+  if (abs(magx) > mineSensitivity){
+    minesDetected += 1;
+//    Serial.print("Mine detected! X:");
+//    Serial.println(abs(magx));
+    return true;
+  }
+
+  else if (abs(magy) > mineSensitivity){
+    minesDetected += 1;
+//    Serial.println("Mine detected! Y:");
+//    Serial.println(abs(magy));
+    return true;
+  }
+
+  else if (abs(magz) > mineSensitivity){
+    minesDetected += 1;
+//    Serial.println("Mine detected! Z:");
+//    Serial.println(abs(magz));
+    return true;
+  }
+
+  else{
+    return false;
   }
 }

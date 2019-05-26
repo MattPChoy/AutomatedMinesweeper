@@ -33,7 +33,3 @@ float heading(){
 void dmpDataReady() {
     mpuInterrupt = true;
 }
-
-bool calibrateGyro(){
-  
-}
