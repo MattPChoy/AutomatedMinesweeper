@@ -15,37 +15,39 @@ void printState(int state){
     #define stateMinePause 1001
     #define stateMarkMine 1100
   */
-
-  if (state == stateDetectWall){
-    Serial.println("stateDetectWall");
-  }
-  else if (state == stateStartTurn){
-    Serial.println("stateStartTurn");
-  }
-  else if (state == stateEvaluateHeading){
-    Serial.println("stateBreak");
-  }
-  else if (state == stateStop){
-    Serial.println("stateStop");
-  }
-  else if (state == statePause){
-    Serial.println("statePause");
-  }
-
-  if (state == stateDetectMine){
-    Serial.println("stateDetectMine");
-  }
-  else if (state == stateMinePause){
-    Serial.println("stateMinePause");
-  }
-  else if (state == stateMarkMine){
-    Serial.println("stateMarkMine");
+  if (false){
+    if (state == stateDetectWall){
+      Serial.println("stateDetectWall");
+    }
+    else if (state == stateStartTurn){
+      Serial.println("stateStartTurn");
+    }
+    else if (state == stateEvaluateHeading){
+      Serial.println("stateBreak");
+    }
+    else if (state == stateStop){
+      Serial.println("stateStop");
+    }
+    else if (state == statePause){
+      Serial.println("statePause");
+    }
+  
+    if (state == stateDetectMine){
+      Serial.println("stateDetectMine");
+    }
+    else if (state == stateMinePause){
+      Serial.println("stateMinePause");
+    }
+    else if (state == stateMarkMine){
+      Serial.println("stateMarkMine");
+    }
   }
 }
 
 void wait_for_start(){
   while(digitalRead(startbtn) == HIGH){
     mpu.resetFIFO();
+    calibrateGyro();
   }
 }
 
@@ -165,5 +167,6 @@ void init_components(){
 }
 
 void init_marking(){
-  
+  myservo.attach(5);
+  myservo.write(servo_init_angle);
 }

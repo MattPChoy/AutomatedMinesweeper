@@ -34,6 +34,6 @@ void dmpDataReady() {
     mpuInterrupt = true;
 }
 
-bool calibrateGyro(){
-  
+void calibrateGyro(){
+  int heading = heading();  
 }

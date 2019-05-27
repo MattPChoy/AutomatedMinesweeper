@@ -2,6 +2,7 @@
 /* Import External Packages */
 #include <NewPing.h>
 #include <Wire.h>
+#include <Servo.h>
 #include <Adafruit_Sensor.h>
 #include <Adafruit_HMC5883_U.h>
 #include "I2Cdev.h"
@@ -16,16 +17,16 @@
     #define M1Pin 12 //DIR-1
     #define M2Pin 13 //DIR-2
 
-    #define forward LOW
-    #define reverse HIGH
+    #define forward HIGH
+    #define reverse LOW
     #define left 0
     #define right 1
 
-    #define speed1 150
-    #define turnSpeed 80
+//    #define speed1 150
+//    #define turnSpeed 80
 
-//    #define speed1 100
-//    #define turnSpeed 70
+    #define speed1 100
+    #define turnSpeed 70
 
     #define triggerPin 7
     #define echoPin 6
@@ -34,7 +35,13 @@
 
     #define interruptPin 2
 
-    int mineSensitivity = 200;
+    #define servo_init_angle  0
+    #define servo_fire_angle  130
+    #define button 6
+    #define potpin  0 //analog in 0
+    #define val 4
+
+    int mineSensitivity = 100;
 
   // integer
     int magx = 0;
@@ -57,7 +64,6 @@
     VectorInt16 aaReal;     // [x, y, z]            gravity-free accel sensor measurements
     VectorInt16 aaWorld;    // [x, y, z]            world-frame accel sensor measurements
     VectorFloat gravity;    // [x, y, z]            gravity vector
-    //float euler[3];         // [psi, theta, phi]    Euler angle container
     float ypr[3];           // [yaw, pitch, roll]   yaw/pitch/roll container and gravity vector
 
     unsigned long initTime = 0;
@@ -65,12 +71,14 @@
     int l_speed, r_speed;
     int initial_heading;
     bool start = false; // status of run
-    bool runyet = false; // status of runoncebool dmpReady = false;  // set true if DMP init was successful
+    bool runyet = false; // status of runonce
+    bool minemarked = false;
 
     // states for mark mine state machine
     #define stateDetectMine 1000
     #define stateMinePause 1001
     #define stateMarkMine 1100
+    #define stateMoveAroundMine 1200
     
     int stateMine;
 
@@ -98,6 +106,8 @@
     NewPing sonar(triggerPin, echoPin, range);
   // Adafruit HMC8553 Library
     Adafruit_HMC5883_Unified mag = Adafruit_HMC5883_Unified(12345);
+  // Servo motor library
+    Servo myservo;
 
 
 void setup(){
@@ -150,7 +160,11 @@ void loop(){
       }
 
     case stateMarkMine:
-//      markMine();
+      markMine();
+      stateMine = stateMoveAroundMine;
+
+    case stateMoveAroundMine:
+//      moveAroudnMine();
       stateMine = stateDetectMine;
   }
 
@@ -173,6 +187,7 @@ void loop(){
         state = stateStartTurn;
         Serial.println("stateStartTurn");
       }
+      
       else{
         steer(speed1, speed1);
       }
