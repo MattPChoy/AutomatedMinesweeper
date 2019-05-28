@@ -15,7 +15,7 @@ void printState(int state){
     #define stateMinePause 1001
     #define stateMarkMine 1100
   */
-  if (false){
+  if (true){
     if (state == stateDetectWall){
       Serial.println("stateDetectWall");
     }
@@ -40,6 +40,13 @@ void printState(int state){
     }
     else if (state == stateMarkMine){
       Serial.println("stateMarkMine");
+    }
+    else if (state == 60){
+      Serial.println("det");
+    }
+    else{
+      Serial.print("unassigned ");
+      Serial.println(state);
     }
   }
 }
@@ -111,7 +118,7 @@ void init_magnetometer(){
   }
 
 //  displaySensorDetails();
-  Serial.println("HMC5883 Magnetometer Initialised");
+//  Serial.println("HMC5883 Magnetometer Initialised");
 }
 
 void init_gyro(){
@@ -164,9 +171,22 @@ void init_components(){
 
   pinMode(altbtn, INPUT);
   digitalWrite(altbtn, HIGH);
+
+//  pinMode(LED1, OUTPUT);
 }
 
+//void led_on(){
+//  digitalWrite(LED1, HIGH);
+//}
+//
+//void led_off(){
+//  digitalWrite(LED1, LOW);
+//}
+
 void init_marking(){
-  myservo.attach(5);
-  myservo.write(servo_init_angle);
+//  myservo.attach(5);
+//  myservo.write(servo_init_angle);
+  pwm.begin();
+  pwm.setPWMFreq(60);
+  delay(10);
 }

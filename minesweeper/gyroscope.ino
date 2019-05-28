@@ -37,3 +37,28 @@ void dmpDataReady() {
 void calibrateGyro(){
   heading();  
 }
+
+/*
+bool gyro_is_ready(){
+  
+  gyro_is_ready_previous = gyro_is_ready_current;
+  gyro_is_ready_current = heading();
+
+  Serial.print(gyro_is_ready_current);
+
+  int delta = abs(gyro_is_ready_previous - gyro_is_ready_current);
+
+  if (delta > gyro_calibration_value){
+    Serial.println("gyroscope is ready");
+//    led_on();
+    return true;
+  }
+
+  else{
+    Serial.println("gyroscope is not ready");
+    led_off();
+    return false;
+  }
+}
+
+*/
