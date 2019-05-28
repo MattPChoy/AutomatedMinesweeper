@@ -59,6 +59,7 @@ void pause(int some_delay){
     delay(some_delay);
 }
 
+/*
 void rotate(int angle){
   // rotate on the inner track
   // right: true
@@ -82,9 +83,97 @@ void rotate(int angle){
     turnDirection = true;
   }
 }
+*/
 
-//void turn_around(){  
-//  stop();
-//  rotate(180);
-//  stop();
-//};
+bool move_around_mine(){
+  int currentHeading = heading();
+  switch(currentCase){
+      case 1:
+        Serial.println(" case1");
+        // initiate left turn
+        projectedHeading = currentHeading + 90;
+        steer(turnSpeed, 0);
+        currentCase = 2;
+        Serial.print("current heading: ");
+        Serial.print(currentHeading);
+
+        Serial.print(" --- projected heading: ");
+        Serial.print(projectedHeading);
+        return false;
+        break;
+        
+
+      case 2:
+        Serial.println(" case2");
+        if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
+          currentCase = 3;
+          stop();
+        }
+        return false;
+        break;
+
+      case 3:
+        Serial.println(" case3");
+        stop();
+        currentCase =  4;
+        return false;
+        break;
+
+      case 4:
+        Serial.println(" case4");
+        currentHeading = heading();
+        projectedHeading = wrap(currentHeading, 180);
+        steer(turnSpeed/(2.2), turnSpeed);
+        currentCase = 5;
+        return false;
+        break;
+
+      case 5:
+        Serial.print(" case5");
+
+        Serial.print("Current Heading: ");
+        Serial.print(currentHeading);
+
+        Serial.print("Projected Heading");
+        Serial.println(projectedHeading);
+        if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
+          currentCase = 6;
+          stop();
+        }
+        return false;
+        break;
+
+      case 6:
+        Serial.println(" case6");
+        // initiate left turn
+        currentHeading = heading();
+        projectedHeading = wrap(currentHeading, 90);
+
+        Serial.print("Current Heading: ");
+        Serial.print(currentHeading);
+
+        Serial.print("Projected Heading");
+        Serial.print(projectedHeading);
+        
+        steer(turnSpeed, 0);
+        currentCase = 7;
+        return false;
+        break;
+        
+
+      case 7:
+        Serial.println(" case7");
+        if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
+          currentCase = 8;
+          stop();  
+        }
+        return false;
+        break;
+
+      case 8:
+        Serial.println(" case8");
+        stop();
+        return true;
+        break;
+    }
+}

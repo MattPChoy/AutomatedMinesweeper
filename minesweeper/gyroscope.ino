@@ -35,5 +35,5 @@ void dmpDataReady() {
 }
 
 void calibrateGyro(){
-  int heading = heading();  
+  heading();  
 }

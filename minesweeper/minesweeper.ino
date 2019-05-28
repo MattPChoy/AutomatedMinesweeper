@@ -96,6 +96,8 @@
     int projectedHeading;
     int turnDirection;
 
+    int currentCase, currentHeading;
+
     #define clockwise 1
     #define counterclockwise 2
     #define startbtn A3
@@ -148,9 +150,12 @@ void loop(){
     case stateDetectMine:
       bool mine = detectMine();
       if (mine){
+        Serial.println("mine detected");
         markMine();
+        Serial.println("marked");
         stateMine = stateMarkMine;
         state = statePause;
+        break;
       }
       else{
         stateMine = stateDetectMine;
@@ -158,14 +163,21 @@ void loop(){
           state = stateDetectWall;
         }
       }
+      break;
 
     case stateMarkMine:
       markMine();
       stateMine = stateMoveAroundMine;
+      break;
+
 
     case stateMoveAroundMine:
-//      moveAroudnMine();
-      stateMine = stateDetectMine;
+      if (move_around_mine()){
+        // Returns true, moving aroudn mine is complete;
+        stateMine = stateDetectMine;
+      }
+      break;
+      
   }
 
   switch(state){
@@ -177,15 +189,15 @@ void loop(){
       if (detectWall()){
         initialHeading = heading();
         projectedHeading = wrap(initialHeading, 180.0);
-        Serial.print("initialHeading:");
-        Serial.print(initialHeading);
-
-        Serial.print("projectedHeading:");
-        Serial.print(projectedHeading);
+//        Serial.print("initialHeading:");
+//        Serial.print(initialHeading);
+//
+//        Serial.print("projectedHeading:");
+//        Serial.print(projectedHeading);
 
         turnDirection = switchTurnDirection(turnDirection);
         state = stateStartTurn;
-        Serial.println("stateStartTurn");
+//        Serial.println("stateStartTurn");
       }
       
       else{
@@ -204,17 +216,17 @@ void loop(){
       }
 
       state = stateEvaluateHeading;
-      Serial.println("stateEvaluateHeading");
+//      Serial.println("stateEvaluateHeading");
       break;
 
     case stateEvaluateHeading:
       // formerly stateTurnAround
       int currentHeading = heading();
-      Serial.println(currentHeading);
+//      Serial.println(currentHeading);
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
         state = stateDetectWall;
-        Serial.println("stateBreak");
-        stop();
+//        Serial.println("stateBreak");
+//        stop();
         steer(speed1, speed1);
       }
       else{
@@ -225,11 +237,11 @@ void loop(){
     case stateBreak:
       if (minesDetected >= 8){
         state = stateStop;
-        Serial.println("stateStop");
+//        Serial.println("stateStop");
       }
       else{
         state = stateDetectWall;
-        Serial.println("stateDetectWall");
+//        Serial.println("stateDetectWall");
       }
       break;
 
