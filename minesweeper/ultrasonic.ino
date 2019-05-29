@@ -5,6 +5,12 @@ int ultrasonic_distance(){
 //    Serial.println(US_distance);
     return US_distance;
   }
+
+//  while (US_distance == 0){
+//    US_distance = sonar.convert_cm(sonar.ping_median(5));
+//  }
+
+//  return US_distance;
   else{
     // invalid distance
     return 999;

@@ -11,14 +11,14 @@
 
 /* Variable Definitions */
   // #define
-    #define baudRate 9600
+    #define baudRate 115200
 
     #define E1Pin 10 //PWM-1
     #define E2Pin 11 //PWM-2
     #define M1Pin 12 //DIR-1
     #define M2Pin 13 //DIR-2
 
-//    #define LED1 A1
+    #define LED1 A1
 
     #define forward HIGH
     #define reverse LOW
@@ -78,10 +78,11 @@
     bool minemarked = false;
 
     // states for mark mine state machine
-    #define stateDetectMine 1
-    #define stateMinePause 2
-    #define stateMarkMine 3
-    #define stateMoveAroundMine 4
+    #define stateDetectMine 10
+    #define stateMinePause 20
+    #define stateMarkMine 30
+    #define stateResetMarking 31
+    #define stateMoveAroundMine 40
 //       #define stateDetectMine 1000
 //    #define stateMinePause 1001
 //    #define stateMarkMine 1100
@@ -96,13 +97,17 @@
     #define stateStop 50
     #define statePause 60
     int state;
+    int markMineState = 0;
+    int markMineMillis;
 
     // variables for state machine layer 1
     int initialHeading;
     int projectedHeading;
     int turnDirection;
 
-    int currentCase, currentHeading;
+    int currentCase = 1;
+    int currentHeading;
+    int initReset;
 
     int gyro_is_ready_current, gyro_is_ready_previous;
 
@@ -141,7 +146,7 @@ void setup(){
   Serial.println("Gyro Initialised");
   init_components();
   Serial.println("Components Initialised");
-
+  init_marking();
   Serial.println("Waiting for Start");
   // wait_for_start(); // clear fifo while in block operation
   Serial.print("Program begin");
@@ -151,7 +156,7 @@ void setup(){
 
   state = statePause; // start the state machine with the initial state
   stateMine = stateMinePause; // start the mark mines state machine with detection
-  stateMine = stateDetectMine;
+//  stateMine = stateDetectMine;
 //  led_off();
 
   Serial.println("Setup finished");
@@ -162,40 +167,66 @@ void setup(){
 
 void loop(){
 
-//  bool readyState = gyro_is_ready();
+//  Serial.print("Heading: ");
+//  Serial.print(heading());
 //
-//  if (!readyState){
-//    while(1){
-//      break;
-//    }
-//  }
-
+//  Serial.print(" Distance: ");
+//  Serial.print(ultrasonic_distance());
+//
+//  Serial.print(" Mag: ");
+//  getMagneticField();
+//  Serial.print(magx);
+//  Serial.print(" : ");
+//  Serial.print(magy);
+//  Serial.print(" : ");
+//  Serial.print(magz);
+  
   altbutton();
-//  startbutton();
+  startbutton();
 
-  printState(state);
-  printState(stateMine);
+//  printState(state);
+//  printState(stateMine);
   switch(stateMine){
+    
     case stateMinePause:
+      Serial.println("stateMinePause");
       break;
+
     case stateDetectMine:
+      Serial.println("stateDetectMine");
       if(detectMine()){
         Serial.println("mine detected");
         stateMine = stateMarkMine;
         state=statePause;
       }
       break;
+      
     case stateMarkMine:
-      Serial.println("marking mine");
-      stateMine = stateMoveAroundMine;
-      markMine();
+      Serial.println("stateMarkMine");
+      if (markMine() == true){
+        stateMine = stateResetMarking;
+        break;
+      }
+      else break;
+
+    case stateResetMarking:
+      Serial.println("stateResetMarking");
+      initReset = millis();
+      resetServo();
+      stateMine = 243525;
       break;
-    case stateMoveAroundMine:
+      
+    case 243525:
+      Serial.println("stateMoveAroundMine");
+
+      state = stateStop;
       if (move_around_mine()){
-        // Returns true, moving aroudn mine is complete;
+        Serial.print("moving around mine");
+        // Returns true, moving around mine is complete;
         stateMine = stateDetectMine;
         state = stateDetectWall;
       }
+      else Serial.print("breaking");
       break;
       
   }
@@ -241,7 +272,8 @@ void loop(){
     case stateEvaluateHeading:
       // formerly stateTurnAround
       int currentHeading = heading();
-//      Serial.println(currentHeading);
+      Serial.print("Current Heading: ");
+      Serial.println(currentHeading);
       if ((((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10)))){
         state = stateDetectWall;
 //        Serial.println("stateBreak");
@@ -270,5 +302,5 @@ void loop(){
   }
 
 
-  mpu.resetFIFO();
+//  mpu.resetFIFO();
 }

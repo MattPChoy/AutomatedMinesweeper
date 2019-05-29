@@ -14,6 +14,7 @@ void printState(int state){
     #define stateDetectMine 1000
     #define stateMinePause 1001
     #define stateMarkMine 1100
+    #
   */
   if (true){
     if (state == stateDetectWall){
@@ -54,6 +55,7 @@ void printState(int state){
 void wait_for_start(){
   while(digitalRead(startbtn) == HIGH){
     mpu.resetFIFO();
+    Serial.println(heading());
     calibrateGyro();
   }
 }
@@ -68,8 +70,49 @@ void startbutton(){
 
 void altbutton(){
   if (digitalRead(altbtn) == LOW){
-    state = statePause;
-    stop();
+    pretest();
+  }
+}
+
+void pretest(){
+  // move forward
+  steer(speed1, speed1);
+  delay(1000);
+
+  // move backward
+  steer(-speed1, -speed1);
+  delay(1000);
+
+  
+  // turn left
+  steer(turnSpeed, -turnSpeed);
+
+  currentHeading = heading();
+  projectedHeading = wrap(currentHeading, 90);
+
+  delay(2000);
+
+  steer(-turnSpeed, turnSpeed);
+
+  while (!((projectedHeading-10) <= currentHeading) && (currentHeading <= (projectedHeading+10))){
+    currentHeading = heading();
+    projectedHeading = wrap(currentHeading, 180);
+  }
+  
+  stop();
+
+  // turn right
+  
+  // detect mine
+  while(1){
+    if (detectMine()){
+      Serial.println("mine detected");
+      markMine();
+    }
+  }
+
+  while(1){
+    resetServo();
   }
 }
 
@@ -175,13 +218,13 @@ void init_components(){
 //  pinMode(LED1, OUTPUT);
 }
 
-//void led_on(){
-//  digitalWrite(LED1, HIGH);
-//}
-//
-//void led_off(){
-//  digitalWrite(LED1, LOW);
-//}
+void led_on(){
+  digitalWrite(LED1, HIGH);
+}
+
+void led_off(){
+  digitalWrite(LED1, LOW);
+}
 
 void init_marking(){
 //  myservo.attach(5);

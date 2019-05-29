@@ -35,21 +35,21 @@ void getMagneticField(){
 bool detectMine(){
   getMagneticField();
 
-  if (abs(magx) > mineSensitivity or magx == 0){
+  if (abs(magx) > mineSensitivity){
     minesDetected += 1;
     Serial.print("Mine detected! X:");
     Serial.println(abs(magx));
     return true;
   }
 
-  else if (abs(magy) > mineSensitivity or magx == 0){
+  else if (abs(magy) > mineSensitivity){
     minesDetected += 1;
     Serial.println("Mine detected! Y:");
     Serial.println(abs(magy));
     return true;
   }
 
-  else if (abs(magz) > mineSensitivity or magx == 0){
+  else if (abs(magz) > mineSensitivity){
     minesDetected += 1;
     Serial.println("Mine detected! Z:");
     Serial.println(abs(magz));

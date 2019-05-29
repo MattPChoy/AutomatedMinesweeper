@@ -38,7 +38,7 @@ void calibrateGyro(){
   heading();  
 }
 
-/*
+
 bool gyro_is_ready(){
   
   gyro_is_ready_previous = gyro_is_ready_current;
@@ -60,5 +60,3 @@ bool gyro_is_ready(){
     return false;
   }
 }
-
-*/

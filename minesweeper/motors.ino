@@ -86,13 +86,21 @@ void rotate(int angle){
 */
 
 bool move_around_mine(){
+  Serial.print("move around mine function called ");
+  Serial.print(currentCase);
+  Serial.print(" case");
   int currentHeading = heading();
+  Serial.print("  Heading: ");
+  Serial.print(currentHeading);
+  Serial.print("  PHeading: ");
+  Serial.println(projectedHeading);
+  
   switch(currentCase){
       case 1:
         Serial.println(" case1");
         // initiate left turn
         projectedHeading = currentHeading + 90;
-        steer(turnSpeed, 0);
+        steer(0, turnSpeed);
         currentCase = 2;
         Serial.print("current heading: ");
         Serial.print(currentHeading);
@@ -147,7 +155,7 @@ bool move_around_mine(){
         Serial.println(" case6");
         // initiate left turn
         currentHeading = heading();
-        projectedHeading = wrap(currentHeading, 90);
+        projectedHeading = wrap(currentHeading, -90);
 
         Serial.print("Current Heading: ");
         Serial.print(currentHeading);
